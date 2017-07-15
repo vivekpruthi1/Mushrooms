@@ -1,0 +1,38 @@
+---
+title: "test"
+author: "vivek"
+date: "July 13, 2017"
+output: html_document
+---
+*just a test*
+
+**test no 2**
+
+#test3
+
+##test4
+
+###test5
+####test6
+gewegqwegqwegiuqwe
+**###test5**
+
+```{r,highlight=FALSE}
+head(mtcars)
+
+```
+
+
+```{r,highlight=TRUE}
+head(mtcars)
+library(ggplot2)
+ggplot(mtcars,aes(x=wt,y=mpg))+geom_line()+geom_text(aes(label=rownames(mtcars)))
+
+
+```
+
+
+1. this is just a test
+    + just test1
+    + just test2
+    
