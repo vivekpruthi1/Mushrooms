@@ -1,0 +1,181 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# #######################Solution to mushrooms problem using ANN#################################
+
+Helper funtion to create a directory on local filesystem
+```{r}
+mkdirs <- function(fp) {
+    if(!file.exists(fp)) {
+        dir.create(dirname(fp), showWarnings=FALSE, recursive = TRUE)
+    }
+} 
+```
+
+Helper function to install and load any package
+```{r}
+# Function to Install and Load R Packages
+installAndLoad <- function(Required_Packages)
+{
+    Remaining_Packages <- Required_Packages[!(Required_Packages %in% installed.packages()[,"Package"])];
+
+    if(length(Remaining_Packages)) 
+    {
+        install.packages(Remaining_Packages);
+    }
+    for(package_name in Required_Packages)
+    {
+        library(package_name,character.only=TRUE,quietly=TRUE);
+    }
+}
+```
+
+Following code will load mushrooms data into dataframe. It will try to load the file from "data/mushrooms.csv" file on local computer. If its not available, it will download it from web and store it locally so we don't have to download it again when we rerun the program again.
+
+```{r}
+loadData <- function(filepath, url, header=FALSE) {
+  # load the CSV file from the local directory if it exists
+  if(file.exists(filepath))
+    dataset <- read.csv(filename, header=TRUE)
+  else {
+    # load the library
+    installAndLoad(c("RCurl"));
+    # download the file
+    downloaded <- getURL(url, ssl.verifypeer=FALSE)
+    # treat the text data as a steam so we can read from it
+    connection <- textConnection(downloaded)
+    # parse the downloaded data as CSV
+    dataset <- read.csv(connection, header=header)
+    # Add headers to dataset
+    column_names = c("class", "cap-shape", "cap-surface", "cap-color", "bruises", "odor",
+                     "gill-attachment", "gill-spacing", "gill-size", "gill-color", "stalk-shape",
+                     "stalk-root", "stalk-surface-above-ring", "stalk-surface-below-ring",
+                     "stalk-color-above-ring", "stalk-color-below-ring", "veil-type", "veil-color",
+                     "ring-number", "ring-type", "spore-print-color", "population", "habitat")
+
+    colnames(dataset) <- column_names
+    #Save file locally
+    if(!file.exists(filepath)) {
+      mkdirs(filepath)
+    }
+    write.csv(file=filepath, x=dataset, row.names = FALSE)
+  }
+  
+  #return dataset
+  dataset
+}
+```
+
+Load data file
+
+```{r}
+# define the filename
+filename <- file.path(getwd(), "data", "mushrooms.csv")
+# specify the URL for the mushroom data CSV
+url <-'https://archive.ics.uci.edu/ml/machine-learning-databases/mushroom/agaricus-lepiota.data'
+#Call loadData function
+mushrooms_data <- loadData(filename, url)
+```
+
+Check dataset
+
+```{r}
+# preview the first 5 rows
+head(mushrooms_data)
+```
+Explore some details about data
+```{r}
+#Dimentions of data
+dim(mushrooms_data)
+```
+```{r}
+#Summary of Data
+summary(mushrooms_data)
+```
+```{r}
+#structure of data
+str(mushrooms_data)
+
+```
+
+Manage missing data
+```{r}
+sapply(mushrooms_data, function(x) sum(is.na(x)))
+sum(is.na(mushrooms_data))
+```
+
+```{r,fig.width=12,fig.height=30,warning=FALSE}
+installAndLoad(c('ggplot2', 'gridExtra'))
+ggplot(mushrooms_data,aes(x=class))+geom_histogram(stat="count",fill="blue")+ggtitle(label="Poisonous or Edible")
+```
+
+Data Analysis
+
+
+Split data into training and test sets
+```{r}
+#Split Dataset into training and test sets
+# install.packages('caTools')
+installAndLoad('caTools')
+set.seed(1)
+split = sample.split(mushrooms_data$class, SplitRatio = 0.8)
+training_set = subset(mushrooms_data, split == TRUE)
+test_set = subset(mushrooms_data, split == FALSE)
+```
+
+Install H2O if it is not installed already
+```{r}
+# Install h2o package if not installed already
+if (!("h2o" %in% rownames(installed.packages()))) {
+  # Next, we download packages that H2O depends on.
+  installAndLoad(c("statmod","RCurl","jsonlite"))
+  # Now we download, install and initialize the H2O package for R.
+  install.packages("h2o", type="source", repos="http://h2o-release.s3.amazonaws.com/h2o/rel-vajda/4/R")
+}
+```
+Finally, let's load H2O and start up an H2O cluster
+```{r}
+library(h2o)
+h2o.init(nthreads = -1)
+h2o.removeAll() ## clean slate - just in case the cluster was already running
+```
+
+Fitting ANN to training set
+```{r}
+classifier = h2o.deeplearning(y = 'class',
+                              training_frame = as.h2o(training_set),
+                              activation = 'Rectifier',
+                              hidden = c(32, 32, 32),
+                              epochs = 100,
+                              train_samples_per_iteration = -2)
+```
+Look at summry of the model
+```{r}
+summary(classifier)
+```
+Predicting test set results
+```{r}
+prob_pred = h2o.predict(classifier, newdata = as.h2o(test_set[-1]))
+y_pred = prob_pred$predict
+y_pred = as.vector(y_pred)
+```
+
+Model accuracy
+```{r}
+# validation accuracy
+h2o.hit_ratio_table(classifier, valid = TRUE)[1, 2]
+```
+
+Make confusion matrix
+```{r}
+cm = table(test_set[,1], y_pred)
+cm
+```
+
+Shutdown H20
+```{r}
+h2o.shutdown()
+```
+
