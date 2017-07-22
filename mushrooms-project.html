@@ -130,7 +130,9 @@ $(document).ready(function () {
 </div>
 <pre class="r"><code>library(ggplot2)
 library(caret)
-library(ggthemes)</code></pre>
+library(ggthemes)
+library(ipred)
+library(ranger)</code></pre>
 <div id="importing-the-data" class="section level2">
 <h2>Importing the data</h2>
 <pre class="r"><code>mushrooms_data&lt;-read.csv(&quot;C:\\vik\\2017\\personal\\DSLA\\course material\\project 1 files\\mushrooms.csv&quot;,header = TRUE,sep = &quot;,&quot;)</code></pre>
@@ -987,6 +989,921 @@ head(mushroom_pred_boost_test)</code></pre>
 <div id="summary-of-models-used" class="section level2">
 <h2>Summary of Models used:</h2>
 <p>Based on the analysis and checking the accuracy of the above models with test data, we will go for Bagging or Random Tree as they have already reached perfect accuracy. Increasing the complexity further with boosting and decreasing the explainabilty would not be appropriate.</p>
+<hr />
+<hr />
+</div>
+<div id="updates-on-07.22.2017" class="section level2">
+<h2>Updates on 07.22.2017 :</h2>
+<p>Following updates are intended : 1. create all the above model in using caret package 2. compare the performance of the models using caret’s functions 3. explore more into data and try neuralnet and h2o</p>
+</div>
+<div id="model-i-rpart-1" class="section level2">
+<h2>Model I : rpart:</h2>
+<p>Training the model on the trainset , we will also do the 10 fold cross validation and repeat 4 times:</p>
+<pre class="r"><code>mushroom_mdl_crt_rpart&lt;-train(x = mushrooms_trainset[,-1],y=mushrooms_trainset[,1],method=&quot;rpart&quot;,trControl=trainControl(method = &quot;cv&quot;,number = 10,repeats = 5))
+
+mushroom_mdl_crt_rpart</code></pre>
+<pre><code>## CART 
+## 
+## 6500 samples
+##   22 predictor
+##    2 classes: 'e', 'p' 
+## 
+## No pre-processing
+## Resampling: Cross-Validated (10 fold) 
+## Summary of sample sizes: 5850, 5851, 5849, 5849, 5850, 5850, ... 
+## Resampling results across tuning parameters:
+## 
+##   cp           Accuracy   Kappa    
+##   0.006383658  0.9944618  0.9889034
+##   0.020108522  0.9875363  0.9750142
+##   0.967124162  0.7035992  0.3854847
+## 
+## Accuracy was used to select the optimal model using  the largest value.
+## The final value used for the model was cp = 0.006383658.</code></pre>
+<p>let’s do the predictions using this model now :</p>
+<pre class="r"><code>mushroom_pred_crt_rpart_test&lt;-predict(mushroom_mdl_crt_rpart,mushrooms_testset)</code></pre>
+<p>Let’s check the confusion Matrix for this model:</p>
+<pre class="r"><code>mushroom_tbl_crt_rpart_test&lt;-confusionMatrix(mushroom_pred_crt_rpart_test,mushrooms_testset$class)
+mushroom_tbl_crt_rpart_test</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction   e   p
+##          e 841   8
+##          p   0 775
+##                                           
+##                Accuracy : 0.9951          
+##                  95% CI : (0.9903, 0.9979)
+##     No Information Rate : 0.5179          
+##     P-Value [Acc &gt; NIR] : &lt; 2e-16         
+##                                           
+##                   Kappa : 0.9901          
+##  Mcnemar's Test P-Value : 0.01333         
+##                                           
+##             Sensitivity : 1.0000          
+##             Specificity : 0.9898          
+##          Pos Pred Value : 0.9906          
+##          Neg Pred Value : 1.0000          
+##              Prevalence : 0.5179          
+##          Detection Rate : 0.5179          
+##    Detection Prevalence : 0.5228          
+##       Balanced Accuracy : 0.9949          
+##                                           
+##        'Positive' Class : e               
+## </code></pre>
+<pre class="r"><code>plot(mushroom_tbl_crt_rpart_test$table,main=&quot;Confusion Matrix (rpart with caret)&quot;)</code></pre>
+<p><img src="data:image/png;base64,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Y1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJaAIBrWNaogloAgGtY1qiCWgCAa1jWqIJ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0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax4M3NhUAAAn5SURBVLREE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT0AQCWse0RBPQBAJax7REE9AEAlrHtEQT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" width="672" /> ##Model II : Decision Tree and Bagging:</p>
+<p>training the model with the same cross validation options :</p>
+<pre class="r"><code>mushroom_mdl_crt_bag&lt;-train(x=mushrooms_trainset[,-1],y=mushrooms_trainset[,1],method=&quot;treebag&quot;,trControl=trainControl(method = &quot;cv&quot;,number = 10,repeats = 5))</code></pre>
+<pre><code>## Loading required package: plyr</code></pre>
+<pre><code>## Loading required package: e1071</code></pre>
+<pre class="r"><code>mushroom_mdl_crt_bag</code></pre>
+<pre><code>## Bagged CART 
+## 
+## 6500 samples
+##   22 predictor
+##    2 classes: 'e', 'p' 
+## 
+## No pre-processing
+## Resampling: Cross-Validated (10 fold) 
+## Summary of sample sizes: 5850, 5850, 5850, 5851, 5851, 5849, ... 
+## Resampling results:
+## 
+##   Accuracy   Kappa    
+##   0.9998462  0.9996919</code></pre>
+<p>let’s do the predictions using Bagged tree now :</p>
+<pre class="r"><code>mushroom_pred_crt_bag_test&lt;-predict(mushroom_mdl_crt_bag,mushrooms_testset)</code></pre>
+<p>Let’s check the confusion Matrix for Bagged Tree:</p>
+<pre class="r"><code>mushroom_tbl_crt_bag_test&lt;-confusionMatrix(mushroom_pred_crt_bag_test,mushrooms_testset$class)
+mushroom_tbl_crt_bag_test</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction   e   p
+##          e 841   0
+##          p   0 783
+##                                      
+##                Accuracy : 1          
+##                  95% CI : (0.9977, 1)
+##     No Information Rate : 0.5179     
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16  
+##                                      
+##                   Kappa : 1          
+##  Mcnemar's Test P-Value : NA         
+##                                      
+##             Sensitivity : 1.0000     
+##             Specificity : 1.0000     
+##          Pos Pred Value : 1.0000     
+##          Neg Pred Value : 1.0000     
+##              Prevalence : 0.5179     
+##          Detection Rate : 0.5179     
+##    Detection Prevalence : 0.5179     
+##       Balanced Accuracy : 1.0000     
+##                                      
+##        'Positive' Class : e          
+## </code></pre>
+<pre class="r"><code>plot(mushroom_tbl_crt_bag_test$table,main=&quot;Confusion Matrix (Bagged Tree with caret)&quot;)</code></pre>
+<p><img src="data:image/png;base64,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k0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBj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IaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAcjg4FkAAAt6SURBVI0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHWMTCoBjSGgdYxMKgGNIaB1jEwqAY0hoHUWxJp6NNx71ikgoHXuPcTcz9Sj4d6zTgEBhTkI6IckoDAHAf2QBBTmIKAfkoDCHAT0QxJQmIOAfkgCCnMQ0A9JQG/1tDlL5bc/7r0a/GIE9EMS0Nv8/LI70e/T93uvCr8UAf2QBPQ2y66cf31bPN57VfilCOiHJKA3+fnlofvDX9+u2QS904teCsxySz7QTbnXPcjsZnnQXvZe1uNlP7/sNzxXv/958as/zg9wnlvygW7K3e5C5jbHg/YK72U9LljuNzyXdoIC78UvEtCfX7Zbnn99cxweeDd+jYD2B+E7VzyNBygnoACNfo2AArxDAgrQSEABGgkoQCMBBWgkoACNBBSgkYACNBJQgEYCCtBIQAEaCShAIwEFaCSgAI0EFKCRgAI0ElCARgIK0EhAARoJKEAjAQVoJKAAjQQUoJGAAjQSUIBGAgrQSEABGgkoQCMBBWgkoACNBBSgkYACNBJQgEYCCtBIQAEaCShAIwEFaCSgAI0EFKCRgAI0ElCARgIK0EhAARoJKEAjAQVoJKDc2Wox8HjLd/78svj0/fn5r2+L3/+c/oL/vfnv+X+HVxJQ7mwU0JsSeimgy+7KBJQyAsqdHQV08fXq77wQ0KeFgFJMQLmz1aCZ6+bdELtdQM95unGPANxMQLmzYUCff3y+YRNUQLk3AeXORgF9Xi4WD9d+p4BybwLKnY0DuuoCulyncfN8/rc/Nhc+He0cXZdz82Wn+0C3X9hF9anfpXr87/sr6i5fHb4FbiWg3Nm5gP7XYhfQzdP6rX0Gd4edPv3fo4D2X7i5vomAbrt7uKLN5f8+/Ba4lYByZydP4R+3//u7bdoeBlnch68/bP/344D2fdxm9zSgh3/v/r6+/KDb1IXbCCh3NnkQadk/r95kblu3p66n2w5u/ql/ur4P5LLbkNz8+3Y36vFpTMvdWaar3RV1Af26u8TuUhoIKHc2DGjfzWW/X/Kp/9O6jJuSrvYXbGI7COjunw9/OAro+st3m5m7P20CutsrsLrh0BUcCCh3dnQifRe5Zb9JuDw8u94WcZ29/QWrUUCf+giu+r2gw4AOIrna/ssmoLuFrJPqOBINBJQ7W030cxPQbrN0eKrSOnPbQ+/7g0m77B0COT4SdBTQ5eHft1c0TLGA0kZAubPVaT4H252DIz/dPs9BUcenMS2PDwSNAzrI5a6XAsqrCSh3drLluLEc7K8cB3TQulsD2r9ItPtGAeXVBJQ7uxjQcdpsgfKOCCh39nJAB7s8n48vaN4H2h1vElBeTUC5s5cDujlUPvrnwQXnjsJ3x4heOAq/3B+FF1BeR0C5s5cDuvnnwSvZHwfnge7PqD85z3N3DtQV54EKKK8joNzZhYBuD8N/7S7bXri5YBfEyVcibf6//fv+FPypVyLtvk9AeR0B5c4uBLR/Ufti/3rL/oJ/Ovda+O7rugP4L74WXkB5HQHlzi4FdHAm0+51Q7uCnrwbU1/I7uu617o/vvRuTALK6wgod3YxoPtz7Q+vVt+m8ez7gfZH7Xdf9sL7gQooryOgAI0EFKCRgAI0ElCARgIK0EhAARoJKEAjAQVoJKAAjQQUoJGAAjQSUIBGAgrQSEABGgkoQCMBBWgkoACNBBSgkYACNBJQgEYCCtBIQAEaCShAIwEFaCSgAI0EFKCRgAI0ElCARgIK0EhAARoJKEAjAQVoJKAAjQQUoJGAAjQSUIBGAgrQSEABGgkoQCMBBWgkoACNBBSgkYACNBJQgEYCCtBIQAEaCShAIwEFaCSgAI0EFKCRgAI0ElCARgIK0EhAARoJKEAjAQVoJKAAjQQUoJGAAjQSUIBGAgrQSEABGgkoQCMBBWgkoACNBBSgkYACNBJQgEYCCtBIQAEaCShAIwEFaCSgAI0EFKCRgAI0ElCARgIK0EhAARoJKEAjAQVoJKAAjQQUoJGAAjQSUIBGAgrQSEABGgkoQCMBBWgkoACNBBSgkYACNBJQgEYCCtBIQAEaCShAIwEFaCSgAI0EFKCRgAI0ElCARgIK0EhAARoJKEAjAQVoJKAAjQQUoJGAAjQSUIBGAgrQSEABGgkoQCMBBWgkoACNBBSgkYACNBJQgEYCCtBIQAEaCShAIwEFaCSgAI0EFKCRgAI0ElCARgIK0EhAARr9f2Fm+R7R7vJnAAAAAElFTkSuQmCC" width="672" /></p>
+</div>
+<div id="model-iii-randomforest" class="section level2">
+<h2>Model III : RandomForest :</h2>
+<p>Training the model with the same cross validation options :</p>
+<pre class="r"><code>mushroom_mdl_crt_rf&lt;-train(x=mushrooms_trainset[,-1],y=mushrooms_trainset[,1],method=&quot;ranger&quot;,trControl=trainControl(method = &quot;cv&quot;,number = 10,repeats = 5))
+
+mushroom_mdl_crt_rf</code></pre>
+<pre><code>## Random Forest 
+## 
+## 6500 samples
+##   22 predictor
+##    2 classes: 'e', 'p' 
+## 
+## No pre-processing
+## Resampling: Cross-Validated (10 fold) 
+## Summary of sample sizes: 5850, 5851, 5850, 5850, 5849, 5849, ... 
+## Resampling results across tuning parameters:
+## 
+##   mtry  Accuracy  Kappa
+##    2    1         1    
+##   12    1         1    
+##   22    1         1    
+## 
+## Accuracy was used to select the optimal model using  the largest value.
+## The final value used for the model was mtry = 2.</code></pre>
+<p>let’s do the predictions using Bagged tree now :</p>
+<pre class="r"><code>mushroom_pred_crt_rf_test&lt;-predict(mushroom_mdl_crt_rf,mushrooms_testset)</code></pre>
+<p>Let’s check the confusion Matrix for Bagged Tree:</p>
+<pre class="r"><code>mushroom_tbl_crt_rf_test&lt;-confusionMatrix(mushroom_pred_crt_rf_test,mushrooms_testset$class)
+mushroom_tbl_crt_rf_test</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction   e   p
+##          e 841   0
+##          p   0 783
+##                                      
+##                Accuracy : 1          
+##                  95% CI : (0.9977, 1)
+##     No Information Rate : 0.5179     
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16  
+##                                      
+##                   Kappa : 1          
+##  Mcnemar's Test P-Value : NA         
+##                                      
+##             Sensitivity : 1.0000     
+##             Specificity : 1.0000     
+##          Pos Pred Value : 1.0000     
+##          Neg Pred Value : 1.0000     
+##              Prevalence : 0.5179     
+##          Detection Rate : 0.5179     
+##    Detection Prevalence : 0.5179     
+##       Balanced Accuracy : 1.0000     
+##                                      
+##        'Positive' Class : e          
+## </code></pre>
+<pre class="r"><code>plot(mushroom_tbl_crt_rf_test$table,main=&quot;Confusion Matrix (Random Forest with caret)&quot;)</code></pre>
+<p><img src="data:image/png;base64,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I5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pAYwhoHSOTSkBjCGgdI5NKQGMIaB0jk0pA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" width="672" /></p>
+</div>
+<div id="model-iii-boosting" class="section level2">
+<h2>Model III : Boosting :</h2>
+<p>Training the model with the same cross validation options :</p>
+<pre class="r"><code>mushroom_mdl_crt_boost&lt;-train(x=mushrooms_trainset[,-1],y=mushrooms_trainset[,1],method=&quot;gbm&quot;,trControl=trainControl(method = &quot;cv&quot;,number = 10,repeats = 5))</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 1L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.2070             nan     0.1000    0.0889
+##      2        1.0620             nan     0.1000    0.0725
+##      3        0.9409             nan     0.1000    0.0604
+##      4        0.8391             nan     0.1000    0.0511
+##      5        0.7526             nan     0.1000    0.0435
+##      6        0.6781             nan     0.1000    0.0373
+##      7        0.6139             nan     0.1000    0.0321
+##      8        0.5579             nan     0.1000    0.0278
+##      9        0.5096             nan     0.1000    0.0243
+##     10        0.4673             nan     0.1000    0.0213
+##     20        0.2404             nan     0.1000    0.0072
+##     40        0.1276             nan     0.1000    0.0035
+##     60        0.0842             nan     0.1000    0.0015
+##     80        0.0580             nan     0.1000    0.0002
+##    100        0.0407             nan     0.1000    0.0002
+##    120        0.0293             nan     0.1000    0.0003
+##    140        0.0228             nan     0.1000   -0.0000
+##    150        0.0207             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 1L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.2002             nan     0.1000    0.0926
+##      2        1.0485             nan     0.1000    0.0756
+##      3        0.9222             nan     0.1000    0.0632
+##      4        0.8160             nan     0.1000    0.0533
+##      5        0.7255             nan     0.1000    0.0454
+##      6        0.6475             nan     0.1000    0.0390
+##      7        0.5795             nan     0.1000    0.0341
+##      8        0.5201             nan     0.1000    0.0296
+##      9        0.4686             nan     0.1000    0.0259
+##     10        0.4231             nan     0.1000    0.0228
+##     20        0.1700             nan     0.1000    0.0076
+##     40        0.0498             nan     0.1000    0.0013
+##     60        0.0259             nan     0.1000    0.0002
+##     80        0.0140             nan     0.1000    0.0000
+##    100        0.0080             nan     0.1000    0.0001
+##    120        0.0049             nan     0.1000    0.0000
+##    140        0.0031             nan     0.1000    0.0000
+##    150        0.0024             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 1L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.1976             nan     0.1000    0.0938
+##      2        1.0438             nan     0.1000    0.0767
+##      3        0.9156             nan     0.1000    0.0639
+##      4        0.8078             nan     0.1000    0.0538
+##      5        0.7157             nan     0.1000    0.0459
+##      6        0.6364             nan     0.1000    0.0395
+##      7        0.5676             nan     0.1000    0.0343
+##      8        0.5076             nan     0.1000    0.0301
+##      9        0.4551             nan     0.1000    0.0263
+##     10        0.4088             nan     0.1000    0.0231
+##     20        0.1524             nan     0.1000    0.0077
+##     40        0.0320             nan     0.1000    0.0007
+##     60        0.0111             nan     0.1000    0.0003
+##     80        0.0045             nan     0.1000    0.0000
+##    100        0.0021             nan     0.1000    0.0000
+##    120        0.0010             nan     0.1000    0.0000
+##    140        0.0005             nan     0.1000    0.0000
+##    150        0.0004             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 1L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.2064             nan     0.1000    0.0894
+##      2        1.0604             nan     0.1000    0.0732
+##      3        0.9390             nan     0.1000    0.0609
+##      4        0.8363             nan     0.1000    0.0514
+##      5        0.7478             nan     0.1000    0.0437
+##      6        0.6732             nan     0.1000    0.0374
+##      7        0.6079             nan     0.1000    0.0324
+##      8        0.5519             nan     0.1000    0.0280
+##      9        0.5029             nan     0.1000    0.0245
+##     10        0.4604             nan     0.1000    0.0214
+##     20        0.2311             nan     0.1000    0.0053
+##     40        0.1174             nan     0.1000    0.0033
+##     60        0.0779             nan     0.1000    0.0016
+##     80        0.0524             nan     0.1000    0.0008
+##    100        0.0366             nan     0.1000    0.0001
+##    120        0.0277             nan     0.1000    0.0001
+##    140        0.0221             nan     0.1000    0.0000
+##    150        0.0195             nan     0.1000    0.0002</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 1L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.1995             nan     0.1000    0.0928
+##      2        1.0473             nan     0.1000    0.0758
+##      3        0.9203             nan     0.1000    0.0630
+##      4        0.8140             nan     0.1000    0.0532
+##      5        0.7238             nan     0.1000    0.0450
+##      6        0.6451             nan     0.1000    0.0393
+##      7        0.5770             nan     0.1000    0.0340
+##      8        0.5178             nan     0.1000    0.0295
+##      9        0.4660             nan     0.1000    0.0258
+##     10        0.4200             nan     0.1000    0.0229
+##     20        0.1673             nan     0.1000    0.0072
+##     40        0.0493             nan     0.1000    0.0012
+##     60        0.0257             nan     0.1000    0.0005
+##     80        0.0135             nan     0.1000    0.0000
+##    100        0.0078             nan     0.1000    0.0001
+##    120        0.0051             nan     0.1000    0.0000
+##    140        0.0032             nan     0.1000    0.0001
+##    150        0.0027             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 1L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.1975             nan     0.1000    0.0939
+##      2        1.0445             nan     0.1000    0.0764
+##      3        0.9165             nan     0.1000    0.0640
+##      4        0.8087             nan     0.1000    0.0539
+##      5        0.7163             nan     0.1000    0.0463
+##      6        0.6370             nan     0.1000    0.0396
+##      7        0.5682             nan     0.1000    0.0343
+##      8        0.5079             nan     0.1000    0.0301
+##      9        0.4556             nan     0.1000    0.0260
+##     10        0.4091             nan     0.1000    0.0232
+##     20        0.1518             nan     0.1000    0.0074
+##     40        0.0315             nan     0.1000    0.0009
+##     60        0.0107             nan     0.1000    0.0003
+##     80        0.0047             nan     0.1000    0.0001
+##    100        0.0022             nan     0.1000    0.0000
+##    120        0.0010             nan     0.1000    0.0000
+##    140        0.0005             nan     0.1000    0.0000
+##    150        0.0004             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 1L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.2073             nan     0.1000    0.0889
+##      2        1.0620             nan     0.1000    0.0727
+##      3        0.9412             nan     0.1000    0.0603
+##      4        0.8397             nan     0.1000    0.0510
+##      5        0.7537             nan     0.1000    0.0434
+##      6        0.6790             nan     0.1000    0.0373
+##      7        0.6145             nan     0.1000    0.0322
+##      8        0.5586             nan     0.1000    0.0278
+##      9        0.5103             nan     0.1000    0.0244
+##     10        0.4677             nan     0.1000    0.0212
+##     20        0.2384             nan     0.1000    0.0065
+##     40        0.1261             nan     0.1000    0.0007
+##     60        0.0824             nan     0.1000    0.0018
+##     80        0.0559             nan     0.1000    0.0004
+##    100        0.0385             nan     0.1000    0.0006
+##    120        0.0278             nan     0.1000    0.0001
+##    140        0.0211             nan     0.1000    0.0000
+##    150        0.0192             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 1L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.1994             nan     0.1000    0.0926
+##      2        1.0478             nan     0.1000    0.0757
+##      3        0.9216             nan     0.1000    0.0629
+##      4        0.8148             nan     0.1000    0.0532
+##      5        0.7243             nan     0.1000    0.0454
+##      6        0.6465             nan     0.1000    0.0388
+##      7        0.5785             nan     0.1000    0.0340
+##      8        0.5197             nan     0.1000    0.0293
+##      9        0.4675             nan     0.1000    0.0261
+##     10        0.4218             nan     0.1000    0.0228
+##     20        0.1692             nan     0.1000    0.0072
+##     40        0.0486             nan     0.1000    0.0009
+##     60        0.0229             nan     0.1000    0.0004
+##     80        0.0121             nan     0.1000    0.0000
+##    100        0.0070             nan     0.1000    0.0000
+##    120        0.0047             nan     0.1000    0.0000
+##    140        0.0028             nan     0.1000    0.0000
+##    150        0.0022             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 1L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.1972             nan     0.1000    0.0937
+##      2        1.0443             nan     0.1000    0.0764
+##      3        0.9158             nan     0.1000    0.0641
+##      4        0.8074             nan     0.1000    0.0541
+##      5        0.7153             nan     0.1000    0.0460
+##      6        0.6356             nan     0.1000    0.0398
+##      7        0.5663             nan     0.1000    0.0344
+##      8        0.5060             nan     0.1000    0.0300
+##      9        0.4535             nan     0.1000    0.0263
+##     10        0.4070             nan     0.1000    0.0231
+##     20        0.1515             nan     0.1000    0.0072
+##     40        0.0301             nan     0.1000    0.0009
+##     60        0.0104             nan     0.1000    0.0003
+##     80        0.0046             nan     0.1000    0.0001
+##    100        0.0021             nan     0.1000    0.0000
+##    120        0.0010             nan     0.1000    0.0000
+##    140        0.0005             nan     0.1000    0.0000
+##    150        0.0004             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 6L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.2058             nan     0.1000    0.0894
+##      2        1.0598             nan     0.1000    0.0731
+##      3        0.9374             nan     0.1000    0.0606
+##      4        0.8352             nan     0.1000    0.0512
+##      5        0.7478             nan     0.1000    0.0437
+##      6        0.6738             nan     0.1000    0.0375
+##      7        0.6093             nan     0.1000    0.0324
+##      8        0.5532             nan     0.1000    0.0281
+##      9        0.5045             nan     0.1000    0.0245
+##     10        0.4614             nan     0.1000    0.0215
+##     20        0.2305             nan     0.1000    0.0070
+##     40        0.1227             nan     0.1000    0.0006
+##     60        0.0807             nan     0.1000    0.0002
+##     80        0.0542             nan     0.1000    0.0010
+##    100        0.0383             nan     0.1000    0.0003
+##    120        0.0273             nan     0.1000    0.0003
+##    140        0.0220             nan     0.1000   -0.0000
+##    150        0.0196             nan     0.1000    0.0003</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 6L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.2000             nan     0.1000    0.0927
+##      2        1.0482             nan     0.1000    0.0758
+##      3        0.9219             nan     0.1000    0.0631
+##      4        0.8156             nan     0.1000    0.0533
+##      5        0.7245             nan     0.1000    0.0455
+##      6        0.6459             nan     0.1000    0.0391
+##      7        0.5782             nan     0.1000    0.0336
+##      8        0.5188             nan     0.1000    0.0295
+##      9        0.4660             nan     0.1000    0.0258
+##     10        0.4202             nan     0.1000    0.0228
+##     20        0.1680             nan     0.1000    0.0072
+##     40        0.0485             nan     0.1000    0.0010
+##     60        0.0251             nan     0.1000    0.0004
+##     80        0.0121             nan     0.1000    0.0001
+##    100        0.0068             nan     0.1000    0.0001
+##    120        0.0044             nan     0.1000    0.0001
+##    140        0.0028             nan     0.1000    0.0000
+##    150        0.0021             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 6L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.1974             nan     0.1000    0.0937
+##      2        1.0436             nan     0.1000    0.0768
+##      3        0.9158             nan     0.1000    0.0640
+##      4        0.8078             nan     0.1000    0.0539
+##      5        0.7152             nan     0.1000    0.0462
+##      6        0.6359             nan     0.1000    0.0396
+##      7        0.5668             nan     0.1000    0.0345
+##      8        0.5068             nan     0.1000    0.0300
+##      9        0.4543             nan     0.1000    0.0264
+##     10        0.4077             nan     0.1000    0.0231
+##     20        0.1508             nan     0.1000    0.0074
+##     40        0.0299             nan     0.1000    0.0007
+##     60        0.0096             nan     0.1000    0.0003
+##     80        0.0040             nan     0.1000    0.0001
+##    100        0.0019             nan     0.1000    0.0001
+##    120        0.0010             nan     0.1000    0.0000
+##    140        0.0005             nan     0.1000    0.0000
+##    150        0.0003             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 1L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.2064             nan     0.1000    0.0895
+##      2        1.0606             nan     0.1000    0.0729
+##      3        0.9394             nan     0.1000    0.0607
+##      4        0.8373             nan     0.1000    0.0512
+##      5        0.7499             nan     0.1000    0.0436
+##      6        0.6747             nan     0.1000    0.0373
+##      7        0.6104             nan     0.1000    0.0324
+##      8        0.5545             nan     0.1000    0.0280
+##      9        0.5059             nan     0.1000    0.0245
+##     10        0.4634             nan     0.1000    0.0213
+##     20        0.2416             nan     0.1000    0.0023
+##     40        0.1222             nan     0.1000    0.0003
+##     60        0.0749             nan     0.1000    0.0002
+##     80        0.0498             nan     0.1000    0.0008
+##    100        0.0360             nan     0.1000    0.0001
+##    120        0.0259             nan     0.1000    0.0002
+##    140        0.0215             nan     0.1000    0.0003
+##    150        0.0193             nan     0.1000   -0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 1L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.1998             nan     0.1000    0.0928
+##      2        1.0477             nan     0.1000    0.0760
+##      3        0.9213             nan     0.1000    0.0634
+##      4        0.8145             nan     0.1000    0.0535
+##      5        0.7231             nan     0.1000    0.0457
+##      6        0.6446             nan     0.1000    0.0393
+##      7        0.5772             nan     0.1000    0.0336
+##      8        0.5176             nan     0.1000    0.0298
+##      9        0.4653             nan     0.1000    0.0260
+##     10        0.4196             nan     0.1000    0.0228
+##     20        0.1668             nan     0.1000    0.0073
+##     40        0.0480             nan     0.1000    0.0010
+##     60        0.0252             nan     0.1000    0.0004
+##     80        0.0128             nan     0.1000    0.0000
+##    100        0.0074             nan     0.1000    0.0002
+##    120        0.0048             nan     0.1000    0.0001
+##    140        0.0030             nan     0.1000    0.0001
+##    150        0.0025             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 1L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.1979             nan     0.1000    0.0936
+##      2        1.0447             nan     0.1000    0.0765
+##      3        0.9169             nan     0.1000    0.0639
+##      4        0.8092             nan     0.1000    0.0539
+##      5        0.7173             nan     0.1000    0.0459
+##      6        0.6379             nan     0.1000    0.0396
+##      7        0.5692             nan     0.1000    0.0345
+##      8        0.5092             nan     0.1000    0.0298
+##      9        0.4567             nan     0.1000    0.0262
+##     10        0.4106             nan     0.1000    0.0229
+##     20        0.1519             nan     0.1000    0.0076
+##     40        0.0319             nan     0.1000    0.0012
+##     60        0.0098             nan     0.1000    0.0002
+##     80        0.0045             nan     0.1000    0.0000
+##    100        0.0020             nan     0.1000    0.0000
+##    120        0.0011             nan     0.1000    0.0000
+##    140        0.0006             nan     0.1000    0.0000
+##    150        0.0004             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 1L, 6L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.2062             nan     0.1000    0.0895
+##      2        1.0598             nan     0.1000    0.0729
+##      3        0.9383             nan     0.1000    0.0606
+##      4        0.8356             nan     0.1000    0.0511
+##      5        0.7479             nan     0.1000    0.0435
+##      6        0.6731             nan     0.1000    0.0373
+##      7        0.6085             nan     0.1000    0.0323
+##      8        0.5524             nan     0.1000    0.0280
+##      9        0.5034             nan     0.1000    0.0243
+##     10        0.4605             nan     0.1000    0.0212
+##     20        0.2319             nan     0.1000    0.0073
+##     40        0.1221             nan     0.1000    0.0005
+##     60        0.0751             nan     0.1000    0.0014
+##     80        0.0498             nan     0.1000    0.0009
+##    100        0.0369             nan     0.1000    0.0001
+##    120        0.0273             nan     0.1000    0.0001
+##    140        0.0219             nan     0.1000    0.0002
+##    150        0.0195             nan     0.1000    0.0002</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 1L, 6L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.1996             nan     0.1000    0.0928
+##      2        1.0473             nan     0.1000    0.0760
+##      3        0.9209             nan     0.1000    0.0633
+##      4        0.8140             nan     0.1000    0.0534
+##      5        0.7231             nan     0.1000    0.0455
+##      6        0.6448             nan     0.1000    0.0393
+##      7        0.5769             nan     0.1000    0.0339
+##      8        0.5180             nan     0.1000    0.0292
+##      9        0.4658             nan     0.1000    0.0258
+##     10        0.4196             nan     0.1000    0.0229
+##     20        0.1672             nan     0.1000    0.0072
+##     40        0.0490             nan     0.1000    0.0007
+##     60        0.0242             nan     0.1000    0.0003
+##     80        0.0120             nan     0.1000    0.0001
+##    100        0.0073             nan     0.1000    0.0001
+##    120        0.0047             nan     0.1000    0.0001
+##    140        0.0029             nan     0.1000    0.0000
+##    150        0.0024             nan     0.1000    0.0001</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 1L, 6L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.1971             nan     0.1000    0.0938
+##      2        1.0435             nan     0.1000    0.0767
+##      3        0.9157             nan     0.1000    0.0640
+##      4        0.8077             nan     0.1000    0.0539
+##      5        0.7156             nan     0.1000    0.0460
+##      6        0.6361             nan     0.1000    0.0397
+##      7        0.5674             nan     0.1000    0.0344
+##      8        0.5069             nan     0.1000    0.0301
+##      9        0.4542             nan     0.1000    0.0263
+##     10        0.4081             nan     0.1000    0.0231
+##     20        0.1527             nan     0.1000    0.0071
+##     40        0.0312             nan     0.1000    0.0009
+##     60        0.0115             nan     0.1000    0.0003
+##     80        0.0051             nan     0.1000    0.0001
+##    100        0.0024             nan     0.1000    0.0001
+##    120        0.0012             nan     0.1000    0.0000
+##    140        0.0006             nan     0.1000    0.0000
+##    150        0.0005             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 1L, 6L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.2066             nan     0.1000    0.0887
+##      2        1.0615             nan     0.1000    0.0727
+##      3        0.9406             nan     0.1000    0.0606
+##      4        0.8393             nan     0.1000    0.0507
+##      5        0.7527             nan     0.1000    0.0434
+##      6        0.6781             nan     0.1000    0.0374
+##      7        0.6136             nan     0.1000    0.0322
+##      8        0.5577             nan     0.1000    0.0278
+##      9        0.5090             nan     0.1000    0.0242
+##     10        0.4663             nan     0.1000    0.0212
+##     20        0.2378             nan     0.1000    0.0072
+##     40        0.1204             nan     0.1000    0.0031
+##     60        0.0799             nan     0.1000    0.0015
+##     80        0.0561             nan     0.1000    0.0002
+##    100        0.0400             nan     0.1000    0.0001
+##    120        0.0292             nan     0.1000    0.0001
+##    140        0.0232             nan     0.1000    0.0000
+##    150        0.0205             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 1L, 6L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.1991             nan     0.1000    0.0927
+##      2        1.0474             nan     0.1000    0.0756
+##      3        0.9204             nan     0.1000    0.0631
+##      4        0.8136             nan     0.1000    0.0532
+##      5        0.7227             nan     0.1000    0.0454
+##      6        0.6448             nan     0.1000    0.0390
+##      7        0.5776             nan     0.1000    0.0336
+##      8        0.5182             nan     0.1000    0.0297
+##      9        0.4664             nan     0.1000    0.0259
+##     10        0.4210             nan     0.1000    0.0227
+##     20        0.1688             nan     0.1000    0.0072
+##     40        0.0518             nan     0.1000    0.0014
+##     60        0.0261             nan     0.1000    0.0003
+##     80        0.0118             nan     0.1000    0.0001
+##    100        0.0068             nan     0.1000    0.0000
+##    120        0.0044             nan     0.1000    0.0000
+##    140        0.0029             nan     0.1000    0.0000
+##    150        0.0023             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 1L, 6L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.1976             nan     0.1000    0.0937
+##      2        1.0445             nan     0.1000    0.0763
+##      3        0.9169             nan     0.1000    0.0639
+##      4        0.8090             nan     0.1000    0.0538
+##      5        0.7168             nan     0.1000    0.0460
+##      6        0.6375             nan     0.1000    0.0397
+##      7        0.5682             nan     0.1000    0.0346
+##      8        0.5082             nan     0.1000    0.0300
+##      9        0.4558             nan     0.1000    0.0261
+##     10        0.4097             nan     0.1000    0.0231
+##     20        0.1548             nan     0.1000    0.0073
+##     40        0.0344             nan     0.1000    0.0008
+##     60        0.0111             nan     0.1000    0.0004
+##     80        0.0046             nan     0.1000    0.0001
+##    100        0.0022             nan     0.1000    0.0001
+##    120        0.0012             nan     0.1000    0.0000
+##    140        0.0007             nan     0.1000    0.0000
+##    150        0.0005             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 1L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.2066             nan     0.1000    0.0892
+##      2        1.0608             nan     0.1000    0.0729
+##      3        0.9396             nan     0.1000    0.0607
+##      4        0.8376             nan     0.1000    0.0513
+##      5        0.7513             nan     0.1000    0.0436
+##      6        0.6766             nan     0.1000    0.0374
+##      7        0.6118             nan     0.1000    0.0322
+##      8        0.5551             nan     0.1000    0.0281
+##      9        0.5059             nan     0.1000    0.0243
+##     10        0.4631             nan     0.1000    0.0213
+##     20        0.2341             nan     0.1000    0.0072
+##     40        0.1228             nan     0.1000    0.0005
+##     60        0.0748             nan     0.1000    0.0002
+##     80        0.0558             nan     0.1000    0.0001
+##    100        0.0402             nan     0.1000    0.0001
+##    120        0.0268             nan     0.1000    0.0004
+##    140        0.0208             nan     0.1000   -0.0000
+##    150        0.0182             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 1L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.1998             nan     0.1000    0.0928
+##      2        1.0478             nan     0.1000    0.0760
+##      3        0.9207             nan     0.1000    0.0632
+##      4        0.8144             nan     0.1000    0.0534
+##      5        0.7237             nan     0.1000    0.0455
+##      6        0.6458             nan     0.1000    0.0389
+##      7        0.5784             nan     0.1000    0.0335
+##      8        0.5188             nan     0.1000    0.0300
+##      9        0.4666             nan     0.1000    0.0262
+##     10        0.4204             nan     0.1000    0.0229
+##     20        0.1669             nan     0.1000    0.0071
+##     40        0.0468             nan     0.1000    0.0006
+##     60        0.0210             nan     0.1000    0.0004
+##     80        0.0119             nan     0.1000    0.0002
+##    100        0.0062             nan     0.1000    0.0001
+##    120        0.0036             nan     0.1000    0.0001
+##    140        0.0024             nan     0.1000    0.0000
+##    150        0.0018             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 1L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.1978             nan     0.1000    0.0935
+##      2        1.0445             nan     0.1000    0.0764
+##      3        0.9168             nan     0.1000    0.0637
+##      4        0.8081             nan     0.1000    0.0543
+##      5        0.7159             nan     0.1000    0.0461
+##      6        0.6364             nan     0.1000    0.0397
+##      7        0.5676             nan     0.1000    0.0343
+##      8        0.5072             nan     0.1000    0.0302
+##      9        0.4545             nan     0.1000    0.0264
+##     10        0.4082             nan     0.1000    0.0232
+##     20        0.1510             nan     0.1000    0.0080
+##     40        0.0293             nan     0.1000    0.0011
+##     60        0.0093             nan     0.1000    0.0003
+##     80        0.0036             nan     0.1000    0.0001
+##    100        0.0017             nan     0.1000    0.0000
+##    120        0.0008             nan     0.1000    0.0000
+##    140        0.0004             nan     0.1000    0.0000
+##    150        0.0003             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 1L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.2071             nan     0.1000    0.0892
+##      2        1.0604             nan     0.1000    0.0729
+##      3        0.9383             nan     0.1000    0.0607
+##      4        0.8358             nan     0.1000    0.0514
+##      5        0.7483             nan     0.1000    0.0436
+##      6        0.6739             nan     0.1000    0.0375
+##      7        0.6100             nan     0.1000    0.0323
+##      8        0.5538             nan     0.1000    0.0280
+##      9        0.5046             nan     0.1000    0.0245
+##     10        0.4619             nan     0.1000    0.0214
+##     20        0.2320             nan     0.1000    0.0062
+##     40        0.1226             nan     0.1000    0.0035
+##     60        0.0761             nan     0.1000    0.0002
+##     80        0.0550             nan     0.1000    0.0001
+##    100        0.0384             nan     0.1000    0.0005
+##    120        0.0274             nan     0.1000    0.0003
+##    140        0.0222             nan     0.1000    0.0002
+##    150        0.0196             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 1L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.1996             nan     0.1000    0.0927
+##      2        1.0471             nan     0.1000    0.0760
+##      3        0.9209             nan     0.1000    0.0633
+##      4        0.8141             nan     0.1000    0.0533
+##      5        0.7228             nan     0.1000    0.0456
+##      6        0.6445             nan     0.1000    0.0390
+##      7        0.5762             nan     0.1000    0.0341
+##      8        0.5172             nan     0.1000    0.0294
+##      9        0.4652             nan     0.1000    0.0261
+##     10        0.4202             nan     0.1000    0.0225
+##     20        0.1664             nan     0.1000    0.0072
+##     40        0.0476             nan     0.1000    0.0011
+##     60        0.0232             nan     0.1000    0.0001
+##     80        0.0113             nan     0.1000    0.0001
+##    100        0.0070             nan     0.1000    0.0000
+##    120        0.0044             nan     0.1000    0.0000
+##    140        0.0030             nan     0.1000    0.0000
+##    150        0.0022             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 1L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.1977             nan     0.1000    0.0935
+##      2        1.0439             nan     0.1000    0.0769
+##      3        0.9156             nan     0.1000    0.0641
+##      4        0.8074             nan     0.1000    0.0542
+##      5        0.7152             nan     0.1000    0.0461
+##      6        0.6358             nan     0.1000    0.0399
+##      7        0.5666             nan     0.1000    0.0346
+##      8        0.5062             nan     0.1000    0.0301
+##      9        0.4535             nan     0.1000    0.0263
+##     10        0.4071             nan     0.1000    0.0232
+##     20        0.1511             nan     0.1000    0.0072
+##     40        0.0308             nan     0.1000    0.0010
+##     60        0.0101             nan     0.1000    0.0001
+##     80        0.0045             nan     0.1000    0.0001
+##    100        0.0021             nan     0.1000    0.0000
+##    120        0.0011             nan     0.1000    0.0000
+##    140        0.0006             nan     0.1000    0.0000
+##    150        0.0004             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 1L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.2072             nan     0.1000    0.0889
+##      2        1.0618             nan     0.1000    0.0728
+##      3        0.9413             nan     0.1000    0.0605
+##      4        0.8387             nan     0.1000    0.0510
+##      5        0.7518             nan     0.1000    0.0434
+##      6        0.6773             nan     0.1000    0.0372
+##      7        0.6129             nan     0.1000    0.0322
+##      8        0.5571             nan     0.1000    0.0279
+##      9        0.5086             nan     0.1000    0.0243
+##     10        0.4662             nan     0.1000    0.0212
+##     20        0.2379             nan     0.1000    0.0072
+##     40        0.1259             nan     0.1000    0.0003
+##     60        0.0793             nan     0.1000    0.0002
+##     80        0.0561             nan     0.1000    0.0010
+##    100        0.0391             nan     0.1000    0.0001
+##    120        0.0286             nan     0.1000    0.0000
+##    140        0.0232             nan     0.1000    0.0000
+##    150        0.0203             nan     0.1000    0.0002</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 1L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.1995             nan     0.1000    0.0924
+##      2        1.0489             nan     0.1000    0.0757
+##      3        0.9229             nan     0.1000    0.0632
+##      4        0.8162             nan     0.1000    0.0533
+##      5        0.7254             nan     0.1000    0.0455
+##      6        0.6470             nan     0.1000    0.0390
+##      7        0.5790             nan     0.1000    0.0339
+##      8        0.5195             nan     0.1000    0.0296
+##      9        0.4676             nan     0.1000    0.0259
+##     10        0.4214             nan     0.1000    0.0229
+##     20        0.1693             nan     0.1000    0.0070
+##     40        0.0494             nan     0.1000    0.0010
+##     60        0.0234             nan     0.1000    0.0003
+##     80        0.0123             nan     0.1000    0.0001
+##    100        0.0076             nan     0.1000    0.0002
+##    120        0.0048             nan     0.1000    0.0000
+##    140        0.0029             nan     0.1000    0.0000
+##    150        0.0024             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 1L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.1971             nan     0.1000    0.0939
+##      2        1.0440             nan     0.1000    0.0765
+##      3        0.9161             nan     0.1000    0.0640
+##      4        0.8083             nan     0.1000    0.0538
+##      5        0.7159             nan     0.1000    0.0463
+##      6        0.6368             nan     0.1000    0.0396
+##      7        0.5676             nan     0.1000    0.0346
+##      8        0.5080             nan     0.1000    0.0298
+##      9        0.4554             nan     0.1000    0.0264
+##     10        0.4091             nan     0.1000    0.0232
+##     20        0.1518             nan     0.1000    0.0075
+##     40        0.0329             nan     0.1000    0.0009
+##     60        0.0107             nan     0.1000    0.0003
+##     80        0.0043             nan     0.1000    0.0001
+##    100        0.0021             nan     0.1000    0.0000
+##    120        0.0012             nan     0.1000    0.0000
+##    140        0.0006             nan     0.1000    0.0000
+##    150        0.0004             nan     0.1000    0.0000</code></pre>
+<pre><code>## Warning in gbm.fit(x = structure(list(cap.shape = structure(c(6L, 6L, 1L, :
+## variable 16: veil.type has no variation.</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        1.1973             nan     0.1000    0.0939
+##      2        1.0442             nan     0.1000    0.0764
+##      3        0.9167             nan     0.1000    0.0637
+##      4        0.8080             nan     0.1000    0.0542
+##      5        0.7156             nan     0.1000    0.0463
+##      6        0.6358             nan     0.1000    0.0398
+##      7        0.5669             nan     0.1000    0.0345
+##      8        0.5067             nan     0.1000    0.0300
+##      9        0.4540             nan     0.1000    0.0264
+##     10        0.4077             nan     0.1000    0.0232
+##     20        0.1511             nan     0.1000    0.0073
+##     40        0.0307             nan     0.1000    0.0012
+##     60        0.0104             nan     0.1000    0.0003
+##     80        0.0045             nan     0.1000    0.0000
+##    100        0.0022             nan     0.1000    0.0001</code></pre>
+<pre class="r"><code>mushroom_mdl_crt_boost</code></pre>
+<pre><code>## Stochastic Gradient Boosting 
+## 
+## 6500 samples
+##   22 predictor
+##    2 classes: 'e', 'p' 
+## 
+## No pre-processing
+## Resampling: Cross-Validated (10 fold) 
+## Summary of sample sizes: 5850, 5850, 5850, 5850, 5850, 5850, ... 
+## Resampling results across tuning parameters:
+## 
+##   interaction.depth  n.trees  Accuracy   Kappa    
+##   1                   50      0.9949231  0.9898271
+##   1                  100      0.9969231  0.9938365
+##   1                  150      0.9981538  0.9963017
+##   2                   50      0.9970769  0.9941447
+##   2                  100      0.9995385  0.9990753
+##   2                  150      1.0000000  1.0000000
+##   3                   50      0.9990769  0.9981510
+##   3                  100      1.0000000  1.0000000
+##   3                  150      1.0000000  1.0000000
+## 
+## Tuning parameter 'shrinkage' was held constant at a value of 0.1
+## 
+## Tuning parameter 'n.minobsinnode' was held constant at a value of 10
+## Accuracy was used to select the optimal model using  the largest value.
+## The final values used for the model were n.trees = 100,
+##  interaction.depth = 3, shrinkage = 0.1 and n.minobsinnode = 10.</code></pre>
+<p>let’s do the predictions using Boosting now :</p>
+<pre class="r"><code>mushroom_pred_crt_boost_test&lt;-predict(mushroom_mdl_crt_boost,mushrooms_testset)</code></pre>
+<p>Let’s check the confusion Matrix for Boosting :</p>
+<pre class="r"><code>mushroom_tbl_crt_boost_test&lt;-confusionMatrix(mushroom_pred_crt_boost_test,mushrooms_testset$class)
+mushroom_tbl_crt_boost_test</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction   e   p
+##          e 841   0
+##          p   0 783
+##                                      
+##                Accuracy : 1          
+##                  95% CI : (0.9977, 1)
+##     No Information Rate : 0.5179     
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16  
+##                                      
+##                   Kappa : 1          
+##  Mcnemar's Test P-Value : NA         
+##                                      
+##             Sensitivity : 1.0000     
+##             Specificity : 1.0000     
+##          Pos Pred Value : 1.0000     
+##          Neg Pred Value : 1.0000     
+##              Prevalence : 0.5179     
+##          Detection Rate : 0.5179     
+##    Detection Prevalence : 0.5179     
+##       Balanced Accuracy : 1.0000     
+##                                      
+##        'Positive' Class : e          
+## </code></pre>
+<pre class="r"><code>plot(mushroom_tbl_crt_boost_test$table,main=&quot;Confusion Matrix (Boosting with caret)&quot;)</code></pre>
+<p><img src="data:image/png;base64,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1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENIaA1jEyqQQ0hoDWMTKpBDSGgNYxMqkENEZUQH9+WSz++Otp9eH7DAszMrkENEZQQLf57AK6WHwtX9qTkckloDFyAtr1cxvQ5WKeghqZVAIaIyagv74tFh++//i0Cei2oH/+Xby8JyOTS0BjxAR0vVh8fnrqArp9Ev+5eHlPRiaXgMaICehysT10tA/oZnN0hgNJRiaVgMZICegmmdttzn1AN5ugMzyHNzKpBDRGSkB/ftkdNzoEdC2g1BHQGAJax8ikEtAYKQE9eQq/tA+UOgIaIyWgm2Rutzn3Ad1sj34sXt6TkckloDFiArpebJvZBXR7TugMZ9IbmVQCGiMmoN3Z87uArhaLOZ7BG5lYAhojJ6D7l3J25nghkpGJJaAxcgK6e+I+Zz+NTCwBjREU0GNC58mnkckloDGiAjozI5NKQGMIaB0jk0pAYyQFdNWdu/Tzy0zP4Y1MKgGNkRPQ7VH4XUB/fFrMcRq9kckloDFiAro7gLR7E9D19kDSHAU1MqkENEZMQFe7T/M4/rdXIlFHQGOkBHSzATrY87l5Fu+18JQR0BgpAf35ZfQhHivvxkQdAY0RFNDhk3bvB0ohAY0hoHWMTCoBjZES0JOPkfOGyhQS0BgpAR1/kvHaxxpTSEBjxAR0ex79/jym7X/O8WIkI5NKQGPEBLQ7f/5ohtNAjUwsAY2RE9DdSzj3jqfUlzIyqQQ0RlBAj29KP08+jUwuAY0RFdCZGZlUAhpDQOsYmVQCGkNA6xiZVAIaIyigg4NI83wwkpFJJaAxcgK6Gp3GJKDUEdAYMQEdnwYqoBQS0BgxAV3O93HGB0YmlYDGSAno+A2V52FkUglojJSAnryh8iyMTCoBjSGgdYxMKgGNkRLQzVN4AWUmAhojJaDzfArSmJFJJaAxYgJ6h+fwRiaVgMaICej2hUgzb4MamVQCGiMloPt3snMiPTMQ0BgCWsfIpBLQGAJax8ikEtAYKQG9ByOTSkBjCGgdI5NKQGMIaB0jk0pAY0QFdP/Z8KuZTmcyMqkENEZQQLvjSNuAzvOx8EYmloDGyAlo/5nGy8U8BTUyqQQ0RkxAf31bLD58//Fp+6HwM725spFJJaAxYgK6XmxfC98FdPskfoYXxhuZVAIaIyagy90r4fcB3WyOznAgycikEtAYKQHdvx/oPqCbTVCvRKKMgMZICejPL7vjRoeArgWUOgIaQ0DrGJlUAhojJaAnT+GX9oFSR0BjpAR0k8ztNuc+oJvt0Y/Fy3syMrkENEZMQNeLbTO7gG7PCZ3hTHojk0pAY8QEtDt7fhfQ1WIxy6d7GJlUAhojJ6Cjt1Se44VIRiaWgMbICejuifuc/TQysQQ0RlBAjwmdJ59GJpeAxogK6MyMTCoBjRET0OVc2509I5NKQGOkBHSetw8ZMzKpBDRGSkDnOXV+zMikEtAYKQG1Bcp8BDRGSkC3r0Sa5YOQBoxMKgGNERPQpx+f5t4GNTKpBDRGSkBHr0Oa6WRQI5NKQGMIaB0jk0pAYwjo7X582vz06vmD+kYmlYDGSAnob7Tc5fcFn6pkZFIJaAwBvdVq8eH7ahPP5bOfjGxkUgloDAG90a9vH74/bQO6+4+rjEwqAY0RFdDtjtDtGyq/5nSmn182G57bgHb/c42RSSWgMYIC2h1H6t6Rvv2cegHlWQIaIyeg++Pwm4BujwI1F/T4FP7nF0/hmSagMWICun0z5Q/fuw+VW77mLKZ1dxBp/0Hz1xiZVAIaIyag68X2qPn+Y41Xi2cPoV+23J9J+uyJoEYmlYDGiAnocvdK+H1AX/feTD8+LV60E8DIpBLQGCkB3SRzu825D+jTC06Dfz0jk0pAY6QEdL/L8hDQtYBSR0BjCGgdI5NKQGOkBPTkKfxyjvcGNTKpBDRGSkA3ydxuc+4DOs8nJBmZVAIaIyag6915R11At+eEzvD5HkYmlYDGiAlod/b8LqCrxWKWT/cwMqkENEZOQEdvqTzDISQjk0tAY+QEdPfEfc5+GplYAhojKKDHhM6TTyOTS0BjPH5AX/eyzdcwMqkENMbjB7Q7Zennl+4E0DkZmVQCGkNA6xiZVAIa4/EDunkKv2mngDIfAY3x+AE9vn/nb/tc+JcyMqkENEZAQLu37xRQZiOgMQICOl1QAaWMgMZICOiWfaDMR0BjCGgdI5NKQGOkBPQejEwqAY0hoHWMTCoBjREV0O0bMm3fzm6ml3YamVQCGiMooN372XXvBzrD2ykbmVwCGiMnoPv3A90EdPmiT3V/PSOTSkBjxAR0+1Z2H753H+mxnOct7YxMKgGNERPQ9WL7sZz7D5Vb7f5RzcikEtAYMQHtPsh4H9B53iPUyKQS0BgpAT35XPiVl3JSR0BjpAT055fdcaNDQNcCSh0BjSGgdYxMKgGNkRLQk6fwS/tAqSOgMVICuknmdptzH9DuYz6qGZlUAhojJqDrxbaZXUC354TOcCa9kUkloDFiAtqdPb8L6GqxmOWTjo1MKgGNkRPQ/Us5Z3s/eiOTS0Bj5AR098R9zn4amVgCGiMooMeEzpNPI5NLQGNEBXRmRiaVgMYQ0DpGJpWAxogN6P/0SiSqCGiM0IB6MxEKCWiMjIBuz/wcnPr549MsR5KMTCoBjZEQ0G0vd7o3Ue6OxQsoZQQ0RkBAB2fQb1+/udsa9UokCglojICArrpydh+KNNvm55ORySWgMR4/oP07hywXf/y1PGyIzsDIpBLQGBEB3T9f//Fp8U+LxRxvZNcxMqkENMbjB7R/78/dztDuDZVnYWRSCWiMtIDOcfDowMikEtAYYQGdcfvTyOQS0BhhAZ1zA9TIxBLQGAJax8ikEtAYAlrHyKQS0BgCWsfIpBLQGAJax8ikEtAYEQGd4s1EKCOgMQS0jpFJJaAxBLSOkUkloDEeP6D3Y2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZCRle0cAAAr8SURBVFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RSCWgMAa1jZFIJaAwBrWNkUgloDAGtY2RS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" width="672" /></p>
+</div>
+<div id="model-comparison" class="section level2">
+<h2>Model Comparison:</h2>
+<pre class="r"><code>comparison&lt;-resamples(list(rpart=mushroom_mdl_crt_rpart,bagging=mushroom_mdl_crt_bag,randomforest=mushroom_mdl_crt_rf,boosting=mushroom_mdl_crt_boost))
+summary(comparison)</code></pre>
+<pre><code>## 
+## Call:
+## summary.resamples(object = comparison)
+## 
+## Models: rpart, bagging, randomforest, boosting 
+## Number of resamples: 10 
+## 
+## Accuracy 
+##                Min. 1st Qu. Median   Mean 3rd Qu.   Max. NA's
+## rpart        0.9892  0.9927 0.9946 0.9945  0.9965 0.9985    0
+## bagging      0.9985  1.0000 1.0000 0.9998  1.0000 1.0000    0
+## randomforest 1.0000  1.0000 1.0000 1.0000  1.0000 1.0000    0
+## boosting     1.0000  1.0000 1.0000 1.0000  1.0000 1.0000    0
+## 
+## Kappa 
+##                Min. 1st Qu. Median   Mean 3rd Qu.   Max. NA's
+## rpart        0.9784  0.9853 0.9892 0.9889  0.9931 0.9969    0
+## bagging      0.9969  1.0000 1.0000 0.9997  1.0000 1.0000    0
+## randomforest 1.0000  1.0000 1.0000 1.0000  1.0000 1.0000    0
+## boosting     1.0000  1.0000 1.0000 1.0000  1.0000 1.0000    0</code></pre>
+<pre class="r"><code>dotplot(comparison)</code></pre>
+<p><img src="data:image/png;base64,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j9+ftAoVVUFYc4A+T6uQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEARoRauQVAVBgFa0CklVEK4oQD++++q7hav+8uHzVtUqJFVBEKAVrUJSFYR1BOjn0io375vO56yiKm7ZgoJoCNCKVrlZfYt8882oYY5sG1VxM/ITnxTEoQVnBGhFq9ysITJ3OfokQNcnPvFpQRxYcO7KAvTju81mc9fP+PXb7cRml6oP7cTudOd4svvfx82bHx4PrLGnVW7WbJ9TgK5SEaD1b24sQP9i03rzQzP9sOm9baa6NN1s/lkXh9PJXYD+rpt7V6wx2Sqtcqvmidn8KEDX5sCR+vRXtxWgXXRudyK//qmdfP/UZGO3R3nfxuJ2qpocAnTTrLKd2SbwbI3JVm3+wG36pnTUqqriZtRVsKQ0ritAu13Pxzb5HtoYbWffDf+7y9PZ5C5A33brF4tMaJWbJUBZb4B2Zz+3x95v97O3AdjGaT/roY3D2eQQoF1SdlejZotMOFi7WQ7hWe0h/BB0w87nU3cEvg3Qbaa+Hy01mxxdROrXiTWmtMrNEqCsNkC7/GuSsAnQ4SJQH6D9tfk2K2eTzwToZJEJrXKzXIVntVfhhwBt90DbO5o27Z1NApRjuQ+UFd8H2v3UBuh9H4dDgDqE53i7awSfsY6quGFLCqJxVQG6v4j0vr929DRck78fTot2l4Rmk0WAzheZ0Co3b0G7qIpbtiw/ryxAu8hrr6YPAdqcCb3b70bubmOaTFYBOltkQquQVAXhugK0TdCH9nbObXA2cdhfhT/yRvpxgB6+kf71NotroSoIVxWgb/7d6NnN7iLSZvPn3cnM4Zr8b95NHuX8zXPnQGONyVZpFYKqIFxXgP4w/jKRduezvZrUHdk/9BflJ18m8uxFpGKNPa1CUhWEKwrQ4+xvdqomj1ijoVVIqoJwKwG6ezjpvj9POpk8Yo0JrUJSFYRbCdDhi0K6K0PzySPWmNAqJFVBuJUAbXKw876aPGKNMa1CUhWEmwnQ/qr87mh8NnnEGiNahaQqCLcToC9Jq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBLZMdxgAABZzSURBVGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQBGhFq5BUBUGAVrQKSVUQ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" width="672" /></p>
 </div>
 
 
