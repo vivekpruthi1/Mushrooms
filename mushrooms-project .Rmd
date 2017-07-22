@@ -1,0 +1,611 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+![](c:\vik\mushrooms.png)
+
+---
+title: "Mushroom Classification"
+author: "Vivek Pruthi, Rajesh Grandhi and Jyothi Pulimamidi"
+date: "July 12, 2017"
+output: html_document
+---
+```{r,warning=FALSE,message=FALSE}
+library(ggplot2)
+library(caret)
+library(ggthemes)
+library(ipred)
+library(ranger)
+```
+##Importing the data##
+```{r,warning=FALSE,message=FALSE}
+mushrooms_data<-read.csv("C:\\vik\\2017\\personal\\DSLA\\course material\\project 1 files\\mushrooms.csv",header = TRUE,sep = ",")
+
+```
+## Exploring the data
+###Dimensions of the mushroom datasets are :
+```{r,warning=FALSE,message=FALSE}
+dim(mushrooms_data)
+```
+### Fields in the dataset are:
+```{r}
+names(mushrooms_data)
+
+```
+###Following are the definitions of these fields: 
+
+* Fields/Attributes/features of the dataframe are 
+
+      + classes: edible=e, poisonous=p
+      
+      + cap-shape: bell=b,conical=c,convex=x,flat=f, knobbed=k,sunken=s
+  
+      + cap-surface: fibrous=f,grooves=g,scaly=y,smooth=s
+  
+      + cap-color: brown=n,buff=b,cinnamon=c,gray=g,green=r,pink=p,purple=u,red=e,white=w,yellow=y
+  
+      + bruises: bruises=t,no=f
+  
+      + odor: almond=a,anise=l,creosote=c,fishy=y,foul=f,musty=m,none=n,pungent=p,spicy=s
+  
+      + gill-attachment: attached=a,descending=d,free=f,notched=n
+  
+      + gill-spacing: close=c,crowded=w,distant=d
+  
+      + gill-size: broad=b,narrow=n
+  
+      + gill-color: black=k,brown=n,buff=b,chocolate=h,gray=g,green=r,orange=o,pink=p,purple=u,red=e,white=w                 ,yellow=y
+  
+      + stalk-shape: enlarging=e,tapering=t
+  
+      + stalk-root: bulbous=b,club=c,cup=u,equal=e,rhizomorphs=z,rooted=r,missing=?
+  
+      + stalk-surface-above-ring: fibrous=f,scaly=y,silky=k,smooth=s
+  
+      + stalk-surface-below-ring: fibrous=f,scaly=y,silky=k,smooth=s
+  
+      + stalk-color-above-ring: brown=n,buff=b,cinnamon=c,gray=g,orange=o,pink=p,red=e,white=w,yellow=y
+  
+      + stalk-color-below-ring: brown=n,buff=b,cinnamon=c,gray=g,orange=o,pink=p,red=e,white=w,yellow=y
+  
+      + veil-type: partial=p,universal=u
+  
+      + veil-color: brown=n,orange=o,white=w,yellow=y
+      
+      + ring-number: none=n,one=o,two=t
+      
+      + ring-type: cobwebby=c,evanescent=e,flaring=f,large=l,none=n,pendant=p,sheathing=s,zone=z
+      
+      + spore-print-color: black=k,brown=n,buff=b,chocolate=h,green=r,orange=o,purple=u,white=w,yellow=y
+      
+      + population: abundant=a,clustered=c,numerous=n,scattered=s,several=v,solitary=y
+      
+      + habitat: grasses=g,leaves=l,meadows=m,paths=p,urban=u,waste=w,woods=d
+
+
+### Let's have a look at the structure of the dataset : ###
+```{r}
+str(mushrooms_data)
+
+```
+
+It is good to have a little peek at a slice of data. 
+```{r}
+head(mushrooms_data)
+tail(mushrooms_data)
+```
+
+It is pertinent from the data that the fields in the dataset are of type factor i.e. these are catgorical variables with different levels. it is better to visualize this data . We will first check the summary and then explore the data visually :
+```{r}
+summary(mushrooms_data)
+
+```
+As few of the levels are shown in summary as (others), let's check what the complete levels are of all the categorical variables in this dataset :
+
+```{r}
+for(i in 1:23){
+  print(names(mushrooms_data[i]))
+  print(levels(mushrooms_data[,i]))
+}
+```
+
+We can check their proportionate distribution too:
+```{r}
+for(i in 1:23){
+  print(names(mushrooms_data[i]))
+ print(prop.table((table(mushrooms_data[,i])))*100)
+}
+
+```
+
+
+```{r,fig.width=12,fig.height=30,warning=FALSE}
+library(ggplot2)
+library(gridExtra)
+ p1<-ggplot(mushrooms_data,aes(x=class))+geom_histogram(stat="count",fill="blue")+ggtitle(label="Poisonous or Edible")
+ p2<-ggplot(mushrooms_data,aes(x=cap.shape))+geom_histogram(stat="count",aes(fill=class))+ggtitle(label="cap shape")
+ p3<-ggplot(mushrooms_data,aes(x=cap.surface))+geom_histogram(stat="count",aes(fill=class))+ggtitle(label="cap surface")
+ p4<-ggplot(mushrooms_data,aes(x=cap.color))+geom_histogram(stat="count",aes(fill=class))+ggtitle(label="cap.color")
+ p5<-ggplot(mushrooms_data,aes(x=bruises))+geom_histogram(stat="count",aes(fill=class))+ggtitle(label="bruises")
+ p6<-ggplot(mushrooms_data,aes(x=odor))+geom_histogram(stat="count",aes(fill=class))+ggtitle(label="odor")
+ p7<-ggplot(mushrooms_data,aes(x=gill.attachment))+geom_histogram(stat="count",aes(fill=class))+ggtitle(label="gill.attachment")
+ p8<-ggplot(mushrooms_data,aes(x=gill.spacing))+geom_histogram(stat="count",aes(fill=class))+ggtitle(label="gill.spacing")
+ p9<-ggplot(mushrooms_data,aes(x=gill.size))+geom_histogram(stat="count",aes(fill=class))+ggtitle(label="gill.size")
+ p10<-ggplot(mushrooms_data,aes(x=gill.color))+geom_histogram(stat="count",aes(fill=class))+ggtitle(label="gill.color")
+ p11<-ggplot(mushrooms_data,aes(x=stalk.shape))+geom_histogram(stat="count",aes(fill=class))+ggtitle(label="stalk.shape")
+ p12<-ggplot(mushrooms_data,aes(x=stalk.root))+geom_histogram(stat="count",aes(fill=class))+ggtitle(label="stalk.root")
+ p13<-ggplot(mushrooms_data,aes(x=stalk.surface.above.ring))+geom_histogram(stat="count",aes(fill=class))+ggtitle(label="stalk.surface.above.ring")
+ p14<-ggplot(mushrooms_data,aes(x=stalk.surface.below.ring))+geom_histogram(stat="count",aes(fill=class))+ggtitle(label="stalk.surface.below.ring")
+ p15<-ggplot(mushrooms_data,aes(x=stalk.color.above.ring))+geom_histogram(stat="count",aes(fill=class))+ggtitle(label="stalk.color.above.ring")
+ p16<-ggplot(mushrooms_data,aes(x=stalk.color.below.ring))+geom_histogram(stat="count",aes(fill=class))+ggtitle(label="stalk.color.below.ring")
+ p17<-ggplot(mushrooms_data,aes(x=veil.type))+geom_histogram(stat="count",aes(fill=class))+ggtitle(label="veil.type")
+ p18<-ggplot(mushrooms_data,aes(x=veil.color))+geom_histogram(stat="count",aes(fill=class))+ggtitle(label="veil.color")
+ p19<-ggplot(mushrooms_data,aes(x=ring.number))+geom_histogram(stat="count",aes(fill=class))+ggtitle(label="ring.number")
+ p20<-ggplot(mushrooms_data,aes(x=ring.type))+geom_histogram(stat="count",aes(fill=class))+ggtitle(label="ring.type")
+ p21<-ggplot(mushrooms_data,aes(x=spore.print.color))+geom_histogram(stat="count",aes(fill=class))+ggtitle(label="spore.print.color")
+ p22<-ggplot(mushrooms_data,aes(x=population))+geom_histogram(stat="count",aes(fill=class))+ggtitle(label="population")
+ p23<-ggplot(mushrooms_data,aes(x=habitat))+geom_histogram(stat="count",aes(fill=class))+ggtitle(label="habitat")
+ grid.arrange(p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15,p16,p17,p18,p19,p20,p21,p22,p23,ncol=2)
+ 
+```
+
+#### We can make the hunches based on the exploratory analysis , but will confirm the huncheas based on the model that we select for machine learning. 
+
+##Machine Learning##
+ We will follow following steps to decide about the classification model:
+ 
+ 1. split the data in train set  and test set
+ 2. train the model on the train set
+ 3. check the efficiency of the model on the train set
+ 4. predict the classification of the test set data
+ 5. check the efficiency of the model on the test set
+ 
+We will iterate these steps for different models and then compare the efficiencies of different models to choose the best model.
+
+***
+
+### Defining split factor ###
+
+First of all we will define a splitting factor which will be used to split data between train and test set . As it is better to train the model on bigger data set and test on small dataset, we will use a variable to accomodate that thought. Thought behind defining the split factor is to check the effect of the size of training set on the efficiency of the model.
+
+```{r}
+mushroom_split_factor<-0.8
+
+```
+
+We will now define the train and test sets:
+
+```{r}
+set.seed(1)
+mushrooms_split_index<-createDataPartition(mushrooms_data$class,p = mushroom_split_factor,list = FALSE)
+mushrooms_trainset<-mushrooms_data[mushrooms_split_index,]
+mushrooms_testset<-mushrooms_data[-mushrooms_split_index,]
+
+```
+
+We will now check the dimensions of mashromm dataset, mushroom_trainset and mushroom_testset to make sure that split is fine.
+
+```{r}
+dim(mushrooms_data)
+dim(mushrooms_testset)
+dim(mushrooms_trainset)
+```
+
+***
+
+As this is a classification problem. I intend to use rpart,Classification decision trees, bagging , Random Forest and boosting models and then compare the results.We will load the requisite packages here:
+```{r}
+library(rpart)
+library(rpart.plot)
+library(caret)
+```
+
+
+### 1. Model I : rpart
+
+We will use the same trainset and testset defined earlier for different models . we will train the model on trainset,plot the model, predict for trainset ,calculate the efficiency of model on trainset ,predict for testset , calculate the efficiency for testset and then compare the change in efficiency from train to testset , which will give us an idea about underfitting or overfitting .
+
+```{r}
+mushrooms_mdl_rpart<-rpart(class~.,mushrooms_trainset,method = "class")
+
+```
+We will plot this model to get an insight now:
+```{r,fig.height=6}
+plot(mushrooms_mdl_rpart)
+text(mushrooms_mdl_rpart,pretty = 0)
+```
+
+Let's look into a little better version of it :
+
+```{r}
+rpart.plot(mushrooms_mdl_rpart,shadow.col = "blue")
+```
+
+Predictions for trainset :
+```{r}
+mushroom_pred_rpart_train<-predict(mushrooms_mdl_rpart,mushrooms_trainset,type = "class")
+
+```
+
+let's look at the consolidated predictions:
+
+```{r}
+table(mushroom_pred_rpart_train)
+```
+
+To check for the accuracy for trainset :
+
+```{r}
+confusionMatrix(mushroom_pred_rpart_train,mushrooms_trainset$class)
+```
+
+Let's look at the predictions on the test set and check the accuracy there :
+
+```{r}
+mushroom_pred_rpart_test<-predict(mushrooms_mdl_rpart,mushrooms_testset,type="class")
+table(mushroom_pred_rpart_test)
+confusionMatrix(mushroom_pred_rpart_test,mushrooms_testset$class)
+```
+
+As we see that the accuracy has increased from 99.38% to 99.51% from trainset to testset, which means our model has performed better for unseen data , but still the acceptance of the model depends upon what is the threshold above which, you will accept.
+
+***
+
+### 2. Model II : Decision Trees and Pruning : 
+```{r}
+library(tree)
+```
+
+Model:
+```{r}
+mushroom_mdl_tree<-tree(class~.,mushrooms_testset)
+
+```
+summary of the model :
+```{r}
+summary(mushroom_mdl_tree)
+```
+Plotting the decision Tree:
+```{r,fig.height=7}
+plot(mushroom_mdl_tree)
+text(mushroom_mdl_tree,pretty=0)
+
+```
+
+A look at the tree in text :
+
+```{r}
+mushroom_mdl_tree
+```
+
+Prediction for training set and the evaluation of efficiency of model on training set :
+```{r}
+mushroom_pred_tree_train<-predict(mushroom_mdl_tree,mushrooms_trainset,type="class")
+mushroom_tree_train_perf<-table(mushroom_pred_tree_train,mushrooms_trainset$class)
+mushroom_tree_train_perf
+sum(diag(mushroom_tree_train_perf))/sum(mushroom_tree_train_perf)
+
+```
+
+Prediction for test set and the evaluation of efficiency of model on test set :
+```{r}
+mushroom_pred_tree_test<-predict(mushroom_mdl_tree,mushrooms_testset,type="class")
+mushroom_tree_test_perf<-table(mushroom_pred_tree_test,mushrooms_testset$class)
+mushroom_tree_test_perf
+sum(diag(mushroom_tree_test_perf))/sum(mushroom_tree_test_perf)
+
+```
+
+In this model also , model performed better with test data than the training data.To find the optimal level of tree complexity, we can use cost complexity pruning in order to select sequence of trees. We do this by using cross validation. It will help us identify the size of tree that will have minimum residual mean davience.
+```{r}
+set.seed(1)
+mushroom_mdl_tree_cv<-cv.tree(mushroom_mdl_tree,FUN = prune.misclass)
+mushroom_mdl_tree_cv
+plot(mushroom_mdl_tree_cv$size,mushroom_mdl_tree_cv$dev,type = "l",xlab = "Size",ylab="Residual Mean Deviance")
+```
+
+we can create a pruned tree for the optimum size 5 as:
+
+```{r}
+mushroom_mdl_tree_prune<-prune.misclass(mushroom_mdl_tree,best=5)
+plot(mushroom_mdl_tree_prune)
+text(mushroom_mdl_tree_prune,pretty=0)
+mushroom_pred_tree_train_prune<-predict(mushroom_mdl_tree_prune,mushrooms_trainset,type="class")
+mushroom_pred_tree_test_prune<- predict(mushroom_mdl_tree_prune,mushrooms_testset,type="class")
+mush_prn_train_perftab<-table(mushroom_pred_tree_train_prune,mushrooms_trainset$class)
+mush_prn_test_perftab<-table(mushroom_pred_tree_test_prune,mushrooms_testset$class)
+```
+Performance of the pruned tree on trainset : 
+```{r}
+sum(diag(mush_prn_train_perftab))/sum(mush_prn_train_perftab)
+```
+Performance of the pruned tree on testset : 
+```{r}
+sum(diag(mush_prn_test_perftab))/sum(mush_prn_test_perftab)
+```
+
+In fact the tree that we created before pruning was optimum already as it had the 5 terminal nodes as were concluded from cross validation.
+
+***
+### 3. Model III : Bagging 
+
+Next Model that we will consider .Here we would try to create trees taking all variables into account while creating multiple trees and then using their average as the final result.first we will load the requisite package :
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+library(randomForest)
+
+```
+
+we will now create the model bagging the trees taking into account all the variables i.e. all the predictors should be considered for each split of the tree(minus the dependent variable):
+
+```{r}
+set.seed(1)
+mushroom_mdl_bagging<-randomForest(class~.,data=mushrooms_trainset,mtry=22,importance=TRUE)
+
+```
+
+Let's take a look at the bagged tree model:
+```{r}
+mushroom_mdl_bagging
+
+```
+
+We would do the predictions for train and test dataset now and check the performance accuracy of the model.We could have used MSE , if the data would have been numeric to test the accuracy of model , but in this case we will use the confusionMatrix to check the efficiency of the model:
+```{r}
+mushroom_pred_bag_train<-predict(mushroom_mdl_bagging,mushrooms_trainset)
+mushroom_pred_bag_train_tbl<-table(mushroom_pred_bag_train,mushrooms_trainset$class)
+mushroom_pred_bag_train_tbl
+```
+
+so the accuracy of the model for the training set is :
+```{r}
+(sum(diag(mushroom_pred_bag_train_tbl))/sum(mushroom_pred_bag_train_tbl))*100
+```
+
+As the model on the trainset may be overfitted to give 100% accuract, let's try this on testset:
+```{r}
+mushroom_pred_bag_test<-predict(mushroom_mdl_bagging,mushrooms_testset)
+mushroom_pred_bag_test_tbl<-table(mushroom_pred_bag_test,mushrooms_testset$class)
+mushroom_pred_bag_test_tbl
+```
+
+so the accuracy of the model for the test set is :
+
+```{r}
+(sum(diag(mushroom_pred_bag_test_tbl))/sum(mushroom_pred_bag_test_tbl))*100
+```
+
+so , we can clearly see that bagging has improved the accuracy of the model.
+
+Let us check at the importance of these variables in this model
+
+```{r,fig.width=12}
+mushroom_imp_bagging<-importance(mushroom_mdl_bagging)
+mushroom_imp_bagging
+mushroom_imp_baggingdf<-as.data.frame(unlist(mushroom_imp_bagging))
+ggplot(mushroom_imp_baggingdf,aes(x=row.names(mushroom_imp_baggingdf),y=MeanDecreaseAccuracy))+geom_bar(stat="identity")+theme(axis.text.x = element_text(angle = 60, hjust = 1))+xlab("Variables")
+```
+
+We can clearly see that the odor,stalk.colorbelow.ring and sport.printcolor are the top 3 variables in the bagged model.
+
+
+***
+### 4. Model IV : randomForest 
+
+This model allows random number of variables to be considered at each split unlike the bagging. By default in classification , number of variables considered are sqrt(total no. of variables) i.e for us , it is roundup(sqrt(23))=5
+
+```{r}
+mushroom_mdl_ranforest<-randomForest(class~.,data=mushrooms_trainset,mtry=5,importance=TRUE,ntree=500)
+
+mushroom_mdl_ranforest
+
+```
+
+let's check the predictions and accuracy on testset:
+```{r}
+mushroom_pred_ranforest_train<-predict(mushroom_mdl_ranforest,mushrooms_trainset)
+mushroom_pred_ranforest_traintbl<-table(mushroom_pred_ranforest_train,mushrooms_trainset$class)
+```
+Accuracy of the model is :
+```{r}
+(sum(diag(mushroom_pred_ranforest_traintbl))/sum(mushroom_pred_ranforest_traintbl))*100
+
+```
+
+Let's do the predictions for the testset and find the accuracy:
+```{r}
+mushroom_pred_ranforest_test<-predict(mushroom_mdl_ranforest,mushrooms_testset)
+mushroom_pred_ranforest_testtbl<-table(mushroom_pred_ranforest_test,mushrooms_testset$class)
+mushroom_pred_ranforest_testtbl
+
+```
+
+Accuracy of the testset is :
+```{r}
+(sum(diag(mushroom_pred_ranforest_testtbl))/sum(mushroom_pred_ranforest_testtbl))*100
+
+```
+
+Let's check this model give what importance to which variable:
+```{r}
+importance(mushroom_mdl_ranforest)
+```
+
+Graphically we can see the importance as:
+```{r}
+varImpPlot(mushroom_mdl_ranforest)
+```
+
+We see that odor, spore.print.color and gill.color are top three variables to affect the accuracy of this model.
+
+***
+### 5. Model V : Boosting
+
+In boosting, trees are grown sequentially. each tree is grown using the information from previously grown trees.  
+We first load the requisite package-gbm:
+```{r}
+library(gbm)
+
+```
+
+As this is a classification problem, we will use distribution="bernoulli" as one of the options of gbm() to cretae model. we have kept no. of trees as 500 just to keep it same with the bagging model to facilitate easy comparison. In this model the expectation from dependent variable is be in the form of 0 or 1 , so we change the data for class=p as 0 and class=e as 1. we will call these newsets as testset1 and trainset1
+
+```{r}
+set.seed(1)
+mushrooms_trainset1<-mushrooms_trainset
+mushrooms_testset1<-mushrooms_testset
+mushrooms_trainset1$class<-ifelse(mushrooms_trainset1$class=="e",1,0)
+mushrooms_testset1$class<-ifelse(mushrooms_testset1$class=="e",1,0)
+mushroom_mdl_boost<-gbm(class~.-class,mushrooms_trainset1,distribution="bernoulli",n.trees = 500,interaction.depth = 4)
+
+```
+here is the summary of Model:
+```{r}
+summary(mushroom_mdl_boost)
+
+```
+
+let's check the partial dependence plots of top 6 variables:
+```{r,fig.width=12}
+par(mfrow=c(2,3))
+plot(mushroom_mdl_boost,i="odor")
+plot(mushroom_mdl_boost,i="spore.print.color")
+plot(mushroom_mdl_boost,i="stalk.color.below.ring")
+plot(mushroom_mdl_boost,i="stalk.root")
+plot(mushroom_mdl_boost,i="gill.size")
+plot(mushroom_mdl_boost,i="cap.color")
+```
+
+we will now use this model to do the prediction for testset:
+```{r}
+mushroom_pred_boost_test<-predict(mushroom_mdl_boost,mushrooms_testset1,n.trees=500)
+head(mushroom_pred_boost_test)
+
+```
+
+we can use the confusionmatrix for accuracy after using ifelse as the predictions don't come in 0 or 1 format.
+
+***
+##Summary of Models used:
+
+
+Based on the analysis and checking the accuracy of the above models with test data, we will go for Bagging or Random Tree as they have already reached perfect accuracy. Increasing the complexity further with boosting and decreasing the explainabilty would not be appropriate.
+
+
+***
+***
+
+##Updates on 07.22.2017 :
+
+Following updates are intended :
+1. create all the above model in using caret package
+2. compare the performance of the models using caret's functions
+3. explore more into data and try neuralnet and h2o
+
+##Model I : rpart:
+
+Training the model on the trainset , we will also do the 10 fold cross validation and repeat 4 times:
+
+```{r}
+mushroom_mdl_crt_rpart<-train(x = mushrooms_trainset[,-1],y=mushrooms_trainset[,1],method="rpart",trControl=trainControl(method = "cv",number = 10,repeats = 5))
+
+mushroom_mdl_crt_rpart
+
+```
+let's do the predictions using this model now :
+
+```{r}
+mushroom_pred_crt_rpart_test<-predict(mushroom_mdl_crt_rpart,mushrooms_testset)
+
+```
+Let's check the confusion Matrix for this model:
+
+```{r}
+mushroom_tbl_crt_rpart_test<-confusionMatrix(mushroom_pred_crt_rpart_test,mushrooms_testset$class)
+mushroom_tbl_crt_rpart_test
+plot(mushroom_tbl_crt_rpart_test$table,main="Confusion Matrix (rpart with caret)")
+```
+##Model II : Decision Tree and Bagging:
+
+training the model with the same cross validation options :
+```{r}
+mushroom_mdl_crt_bag<-train(x=mushrooms_trainset[,-1],y=mushrooms_trainset[,1],method="treebag",trControl=trainControl(method = "cv",number = 10,repeats = 5))
+
+mushroom_mdl_crt_bag
+```
+
+let's do the predictions using Bagged tree now :
+
+```{r}
+mushroom_pred_crt_bag_test<-predict(mushroom_mdl_crt_bag,mushrooms_testset)
+
+```
+
+Let's check the confusion Matrix for Bagged Tree:
+
+```{r}
+mushroom_tbl_crt_bag_test<-confusionMatrix(mushroom_pred_crt_bag_test,mushrooms_testset$class)
+mushroom_tbl_crt_bag_test
+plot(mushroom_tbl_crt_bag_test$table,main="Confusion Matrix (Bagged Tree with caret)")
+```
+
+##Model III : RandomForest :
+
+Training the model with the same cross validation options :
+```{r}
+mushroom_mdl_crt_rf<-train(x=mushrooms_trainset[,-1],y=mushrooms_trainset[,1],method="ranger",trControl=trainControl(method = "cv",number = 10,repeats = 5))
+
+mushroom_mdl_crt_rf
+```
+
+let's do the predictions using Bagged tree now :
+
+```{r}
+mushroom_pred_crt_rf_test<-predict(mushroom_mdl_crt_rf,mushrooms_testset)
+
+```
+
+Let's check the confusion Matrix for Bagged Tree:
+
+```{r}
+mushroom_tbl_crt_rf_test<-confusionMatrix(mushroom_pred_crt_rf_test,mushrooms_testset$class)
+mushroom_tbl_crt_rf_test
+plot(mushroom_tbl_crt_rf_test$table,main="Confusion Matrix (Random Forest with caret)")
+```
+
+##Model III : Boosting :
+
+Training the model with the same cross validation options :
+```{r}
+mushroom_mdl_crt_boost<-train(x=mushrooms_trainset[,-1],y=mushrooms_trainset[,1],method="gbm",trControl=trainControl(method = "cv",number = 10,repeats = 5))
+
+mushroom_mdl_crt_boost
+```
+
+let's do the predictions using Boosting now :
+
+```{r}
+mushroom_pred_crt_boost_test<-predict(mushroom_mdl_crt_boost,mushrooms_testset)
+
+```
+
+Let's check the confusion Matrix for Boosting :
+
+```{r}
+mushroom_tbl_crt_boost_test<-confusionMatrix(mushroom_pred_crt_boost_test,mushrooms_testset$class)
+mushroom_tbl_crt_boost_test
+plot(mushroom_tbl_crt_boost_test$table,main="Confusion Matrix (Boosting with caret)")
+```
+
+##Model Comparison:
+
+```{r}
+comparison<-resamples(list(rpart=mushroom_mdl_crt_rpart,bagging=mushroom_mdl_crt_bag,randomforest=mushroom_mdl_crt_rf,boosting=mushroom_mdl_crt_boost))
+summary(comparison)
+dotplot(comparison)
+
+```
+
