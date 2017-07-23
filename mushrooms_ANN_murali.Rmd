@@ -3,7 +3,7 @@ title: "R Notebook"
 output: html_notebook
 ---
 
-# #######################Solution to mushrooms problem using ANN#################################
+# #######################Solution to mushrooms problem using ANN #################################
 
 Helper funtion to create a directory on local filesystem
 ```{r}
@@ -55,7 +55,10 @@ loadData <- function(filepath, url, header=FALSE) {
                      "stalk-color-above-ring", "stalk-color-below-ring", "veil-type", "veil-color",
                      "ring-number", "ring-type", "spore-print-color", "population", "habitat")
 
+    
     colnames(dataset) <- column_names
+    #Expand e and p to edible and posonous
+    dataset$class = sapply(dataset$class, function(x){ifelse(x=='e', 'edible', 'poisonous')})
     #Save file locally
     if(!file.exists(filepath)) {
       mkdirs(filepath)
@@ -68,8 +71,8 @@ loadData <- function(filepath, url, header=FALSE) {
 }
 ```
 
+*********************************Main program start here**********************************
 Load data file
-
 ```{r}
 # define the filename
 filename <- file.path(getwd(), "data", "mushrooms.csv")
@@ -82,10 +85,10 @@ mushrooms_data <- loadData(filename, url)
 Check dataset
 
 ```{r}
-# preview the first 5 rows
+# preview the first 6 rows
 head(mushrooms_data)
 ```
-Explore some details about data
+Explore some details about data. We have 22 predictors and its a binary classification problem
 ```{r}
 #Dimentions of data
 dim(mushrooms_data)
@@ -94,24 +97,36 @@ dim(mushrooms_data)
 #Summary of Data
 summary(mushrooms_data)
 ```
+# veil.type is same for all observations. We can drop it
+```{r}
+mushroom$veil_type = NULL  # remove veil_type because all are partial, unnecessary column
+```
+
 ```{r}
 #structure of data
 str(mushrooms_data)
-
 ```
 
-Manage missing data
+Manage missing data. We don't have any missing data
 ```{r}
 sapply(mushrooms_data, function(x) sum(is.na(x)))
 sum(is.na(mushrooms_data))
 ```
 
-```{r,fig.width=12,fig.height=30,warning=FALSE}
-installAndLoad(c('ggplot2', 'gridExtra'))
-ggplot(mushrooms_data,aes(x=class))+geom_histogram(stat="count",fill="blue")+ggtitle(label="Poisonous or Edible")
-```
-
 Data Analysis
+```{r}
+installAndLoad(c('caret'))
+head(mushrooms_data[, 2:5])
+par(mfrow=c(2,2))
+plot(table(mushrooms_data$odor, mushrooms_data$class), col = 'blue')
+plot(table(mushrooms_data$stalk.root, mushrooms_data$class), col = 'blue')
+plot(table(mushrooms_data$gill.color, mushrooms_data$class), col = 'blue')
+plot(table(mushrooms_data$gill.spacing, mushrooms_data$class), col = 'blue')
+table(mushrooms_data$odor, mushrooms_data$class)
+table(mushrooms_data$stalk.root, mushrooms_data$class)
+table(mushrooms_data$gill.color, mushrooms_data$class)
+table(mushrooms_data$gill.spacing, mushrooms_data$class)
+```
 
 
 Split data into training and test sets
@@ -147,8 +162,8 @@ Fitting ANN to training set
 classifier = h2o.deeplearning(y = 'class',
                               training_frame = as.h2o(training_set),
                               activation = 'Rectifier',
-                              hidden = c(32, 32, 32),
-                              epochs = 100,
+                              hidden = c(6,6),
+                              epochs = 10,
                               train_samples_per_iteration = -2)
 ```
 Look at summry of the model
@@ -165,16 +180,76 @@ y_pred = as.vector(y_pred)
 Model accuracy
 ```{r}
 # validation accuracy
-h2o.hit_ratio_table(classifier, valid = TRUE)[1, 2]
+plot(classifier)
 ```
-
-Make confusion matrix
 ```{r}
-cm = table(test_set[,1], y_pred)
-cm
+par(mfrow=c(2,2))
+plot(classifier, timestep = "epochs", metric = "classification_error")
+plot(classifier, timestep = "epochs", metric = "rmse")
+plot(classifier, timestep = "epochs", metric = "logloss")
+plot(classifier, timestep = "duration", metric = "logloss")
 ```
 
-Shutdown H20
+Scoring history
+```{r}
+h2o.scoreHistory(classifier)
+```
+
+Apply grid search to find optimal hyperparameters. We will test with activation, L1, and L2
+```{r}
+activation_opt <- c("Rectifier", "Maxout", "Tanh")
+l1_opt <- c(0, 0.00001, 0.0001, 0.001, 0.01)
+l2_opt <- c(0, 0.00001, 0.0001, 0.001, 0.01)
+
+hyper_params <- list(activation = activation_opt, l1 = l1_opt, l2 = l2_opt)
+search_criteria <- list(strategy = "RandomDiscrete", max_runtime_secs = 600)
+
+splits <- h2o.splitFrame(as.h2o(training_set), ratios = 0.8, seed = 1)
+
+dl_grid <- h2o.grid("deeplearning", x = colnames(training_set[,-1]), y = 'class',
+                    grid_id = "dl_grid",
+                    training_frame = splits[[1]],
+                    validation_frame = splits[[2]],
+                    seed = 1,
+                    hidden = c(20,20),
+                    hyper_params = hyper_params,
+                    search_criteria = search_criteria)
+
+dl_gridperf <- h2o.getGrid(grid_id = "dl_grid", 
+                           sort_by = "accuracy", 
+                           decreasing = TRUE)
+```
+```{r}
+print(dl_gridperf)
+```
+
+Get best model out
+```{r}
+best_dl_model_id <- dl_gridperf@model_ids[[1]]
+best_dl <- h2o.getModel(best_dl_model_id)
+
+best_dl_perf <- h2o.performance(model = best_dl, newdata = as.h2o(test_set))
+h2o.mse(best_dl_perf)
+```
+
+Compare best model with our original model
+```{r}
+print('Best Model performance:')
+h2o.confusionMatrix(best_dl_perf)
+h2o.mse(best_dl_perf)
+```
+Original classifier
+```{r}
+print('Original Model performance:')
+h2o.confusionMatrix(classifier)
+h2o.mse(classifier)
+```
+Summary of best model:
+```{r}
+summary(best_dl_perf)
+plot(best_dl_perf)
+```
+
 ```{r}
 h2o.shutdown()
 ```
